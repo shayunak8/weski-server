@@ -14,7 +14,7 @@ A high-performance hotel search backend built with NestJS that integrates with e
 
 ## Requirements
 
-- Node.js 20+ 
+- Node.js 20+
 - npm or yarn
 
 ## Installation
@@ -56,6 +56,7 @@ The server will start on `http://localhost:3000` (or the port specified in `.env
 Returns the list of available ski resorts.
 
 **Response:**
+
 ```json
 [
   { "id": 1, "name": "Val Thorens" },
@@ -73,6 +74,7 @@ Returns the list of available ski resorts.
 Searches for hotels and streams results as they arrive using Server-Sent Events (SSE).
 
 **Request Body:**
+
 ```json
 {
   "ski_site": 1,
@@ -100,6 +102,7 @@ data: {"type":"complete","data":[...all hotels sorted by price...],"total":10}\n
 ```
 
 **Hotel Object:**
+
 ```json
 {
   "id": "string",
@@ -123,6 +126,7 @@ Alternative endpoint that returns all results at once (sorted by price).
 **Request Body:** Same as streaming endpoint
 
 **Response:**
+
 ```json
 {
   "hotels": [...sorted hotels...],
@@ -143,6 +147,7 @@ interface IHotelProvider {
 ```
 
 To add a new provider:
+
 1. Implement the `IHotelProvider` interface
 2. Add the provider to the `HOTEL_PROVIDERS` array in `hotels.module.ts`
 
@@ -210,15 +215,17 @@ The compiled JavaScript will be in the `dist/` directory.
 ## Environment Variables
 
 | Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `3000` |
+| -------- | ----------- | ------- |
+| `PORT`   | Server port | `3000`  |
 
 ## API Integration
 
 The application integrates with:
+
 - **HotelsSimulator API**: `https://gya7b1xubh.execute-api.eu-west-2.amazonaws.com/default/HotelsSimulator`
 
 The API expects:
+
 ```json
 {
   "query": {

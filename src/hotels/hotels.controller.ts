@@ -5,21 +5,28 @@ import {
   Get,
   Res,
   Header,
-  UsePipes,
-  ValidationPipe,
+  Logger,
+  HttpStatus,
+  HttpException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { HotelsService } from './hotels.service';
 import { SearchHotelsDto } from './dto/search-hotels.dto';
 import { HotelResponseDto } from './dto/hotel-response.dto';
 import { SkiResortDto } from './dto/ski-resort.dto';
+import { HOTELS_CONSTANTS } from './constants/hotels.constants';
 
 @Controller('hotels')
 export class HotelsController {
+  private readonly logger = new Logger(HotelsController.name);
+
   constructor(private readonly hotelsService: HotelsService) {}
 
   @Get('ski-resorts')
-  @Header('Cache-Control', 'public, max-age=3600')
+  @Header(
+    'Cache-Control',
+    `public, max-age=${HOTELS_CONSTANTS.CACHE.SKI_RESORTS_TTL_SECONDS}`,
+  )
   getSkiResorts(): SkiResortDto[] {
     return [
       {
@@ -46,18 +53,11 @@ export class HotelsController {
   }
 
   @Post('search')
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-      whitelist: true,
-      forbidNonWhitelisted: false,
-    }),
-  )
   async searchHotels(
     @Body() searchDto: SearchHotelsDto,
     @Res() res: Response,
   ): Promise<void> {
+    res.status(HttpStatus.OK);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -85,7 +85,7 @@ export class HotelsController {
         );
         res.end();
       }
-    }, 60000);
+    }, HOTELS_CONSTANTS.STREAMING.SSE_TIMEOUT_MS);
 
     hotelsObservable.subscribe({
       next: (hotel) => {
@@ -111,9 +111,15 @@ export class HotelsController {
         clearTimeout(timeout);
         if (!hasCompleted) {
           hasCompleted = true;
-          console.error('Error in hotel search:', error);
+          this.logger.error('Error in hotel search', error.stack);
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR);
           res.write(
-            `data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`,
+            `data: ${JSON.stringify({
+              type: 'error',
+              statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: error.message,
+              error: 'Internal Server Error',
+            })}\n\n`,
           );
           res.end();
         }
@@ -134,15 +140,10 @@ export class HotelsController {
   }
 
   @Post('search/sync')
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-      whitelist: true,
-      forbidNonWhitelisted: false,
-    }),
-  )
-  async searchHotelsSync(@Body() searchDto: SearchHotelsDto) {
+  async searchHotelsSync(@Body() searchDto: SearchHotelsDto): Promise<{
+    hotels: HotelResponseDto[];
+    total: number;
+  }> {
     const query = {
       ski_site: searchDto.ski_site,
       from_date: searchDto.from_date,
@@ -168,7 +169,17 @@ export class HotelsController {
           });
         },
         error: (error) => {
-          reject(error);
+          this.logger.error('Error in synchronous hotel search', error.stack);
+          reject(
+            new HttpException(
+              {
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to search hotels',
+                error: 'Internal Server Error',
+              },
+              HttpStatus.INTERNAL_SERVER_ERROR,
+            ),
+          );
         },
         complete: () => {
           const sortedHotels = this.hotelsService.getSortedHotels(hotels);
