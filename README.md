@@ -1,98 +1,250 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# WeSki Hotel Search API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A high-performance hotel search backend built with NestJS that integrates with external API providers to fetch hotel availability. The architecture supports multiple providers and streams results in real-time for optimal user experience.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- 🚀 **Real-time Streaming**: Results are streamed to clients as they arrive from API providers
+- 🏗️ **Extensible Architecture**: Easy to add new hotel providers via the `IHotelProvider` interface
+- 🔄 **Smart Aggregation**: Automatically queries for requested group size and all larger sizes (up to 10)
+- ✅ **Deduplication**: Prevents duplicate hotels from being sent to clients
+- 📊 **Sorted Results**: Hotels are sorted by price (ascending)
+- 🎯 **Type-Safe**: Full TypeScript implementation with DTOs and interfaces
+- ⚡ **High Performance**: Non-blocking, asynchronous operations with RxJS
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requirements
 
-## Project setup
+- Node.js 20+
+- npm or yarn
+
+## Installation
 
 ```bash
-$ npm install
+# Install dependencies
+npm install
 ```
 
-## Compile and run the project
+## Environment Setup
+
+Create a `.env` file in the root directory:
+
+```env
+PORT=3000
+```
+
+The server will default to port 3000 if `PORT` is not specified.
+
+## Running the Application
 
 ```bash
-# development
-$ npm run start
+# Development mode (with hot-reload)
+npm run start:dev
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Production mode
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+The server will start on `http://localhost:3000` (or the port specified in `.env`).
+
+## API Endpoints
+
+### 1. Get Ski Resorts
+
+**GET** `/hotels/ski-resorts`
+
+Returns the list of available ski resorts.
+
+**Response:**
+
+```json
+[
+  { "id": 1, "name": "Val Thorens" },
+  { "id": 2, "name": "Courchevel" },
+  { "id": 3, "name": "Tignes" },
+  { "id": 4, "name": "La Plagne" },
+  { "id": 5, "name": "Chamonix" }
+]
+```
+
+### 2. Search Hotels (Streaming)
+
+**POST** `/hotels/search`
+
+Searches for hotels and streams results as they arrive using Server-Sent Events (SSE).
+
+**Request Body:**
+
+```json
+{
+  "ski_site": 1,
+  "from_date": "03/04/2025",
+  "to_date": "03/11/2025",
+  "group_size": 2
+}
+```
+
+**Parameters:**
+- `ski_site` (number, required): Ski resort ID (1-5)
+- `from_date` (string, required): Start date in format `DD/MM/YYYY`
+- `to_date` (string, required): End date in format `DD/MM/YYYY`
+- `group_size` (number, required): Number of people (1-10)
+
+**Response (SSE Stream):**
+
+The endpoint streams results as they arrive:
+
+```
+data: {"type":"hotel","data":{...hotel object...}}\n\n
+data: {"type":"hotel","data":{...hotel object...}}\n\n
+...
+data: {"type":"complete","data":[...all hotels sorted by price...],"total":10}\n\n
+```
+
+**Hotel Object:**
+
+```json
+{
+  "id": "string",
+  "name": "string",
+  "price": 123.45,
+  "images": ["url1", "url2"],
+  "amenities": [],
+  "stars": 4,
+  "rating": 0,
+  "location": "latitude, longitude",
+  "group_size": 2
+}
+```
+
+### 3. Search Hotels (Synchronous)
+
+**POST** `/hotels/search/sync`
+
+Alternative endpoint that returns all results at once (sorted by price).
+
+**Request Body:** Same as streaming endpoint
+
+**Response:**
+
+```json
+{
+  "hotels": [...sorted hotels...],
+  "total": 10
+}
+```
+
+## Architecture
+
+### Provider Pattern
+
+The application uses a provider pattern to support multiple hotel API providers:
+
+```typescript
+interface IHotelProvider {
+  searchHotels(query: HotelSearchQuery): Observable<Hotel>;
+}
+```
+
+To add a new provider:
+
+1. Implement the `IHotelProvider` interface
+2. Add the provider to the `HOTEL_PROVIDERS` array in `hotels.module.ts`
+
+### How It Works
+
+1. **Multiple Queries**: When a user searches for group size 2, the system automatically queries for sizes 2, 3, 4, 5, 6, 7, 8, 9, and 10
+2. **Parallel Requests**: All queries are executed in parallel for maximum performance
+3. **Streaming**: Results are streamed to the client as soon as they arrive from any provider
+4. **Deduplication**: The `distinct` operator ensures each hotel is sent only once
+5. **Sorting**: Final results are sorted by price (ascending)
+
+## Project Structure
+
+```
+src/
+├── hotels/
+│   ├── dto/                    # Data Transfer Objects
+│   │   ├── search-hotels.dto.ts
+│   │   ├── hotel-response.dto.ts
+│   │   └── ski-resort.dto.ts
+│   ├── interfaces/             # TypeScript interfaces
+│   │   ├── hotel.interface.ts
+│   │   ├── hotel-provider.interface.ts
+│   │   └── hotel-search-query.interface.ts
+│   ├── providers/              # API provider implementations
+│   │   └── hotels-simulator.provider.ts
+│   ├── hotels.controller.ts    # REST endpoints
+│   ├── hotels.service.ts       # Business logic
+│   └── hotels.module.ts        # NestJS module
+├── app.module.ts
+└── main.ts
+```
+
+## Code Quality
+
+- ✅ TypeScript with strict type checking
+- ✅ NestJS best practices (Dependency Injection, Modules, Controllers)
+- ✅ RxJS for reactive programming
+- ✅ Input validation with class-validator
+- ✅ Error handling and logging
+- ✅ Clean separation of concerns
+- ✅ No code duplication
+
+## Testing
 
 ```bash
-# unit tests
-$ npm run test
+# Unit tests
+npm run test
 
-# e2e tests
-$ npm run test:e2e
+# E2E tests
+npm run test:e2e
 
-# test coverage
-$ npm run test:cov
+# Test coverage
+npm run test:cov
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Building for Production
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The compiled JavaScript will be in the `dist/` directory.
 
-## Resources
+## Environment Variables
 
-Check out a few resources that may come in handy when working with NestJS:
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `PORT`   | Server port | `3000`  |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## API Integration
 
-## Support
+The application integrates with:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **HotelsSimulator API**: `https://gya7b1xubh.execute-api.eu-west-2.amazonaws.com/default/HotelsSimulator`
 
-## Stay in touch
+The API expects:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```json
+{
+  "query": {
+    "ski_site": 1,
+    "from_date": "03/04/2025",
+    "to_date": "03/11/2025",
+    "group_size": 4
+  }
+}
+```
+
+## Performance Optimizations
+
+- **Streaming**: Results are sent as they arrive, not waiting for all requests
+- **Parallel Requests**: Multiple group size queries run concurrently
+- **Deduplication**: Prevents sending duplicate hotels
+- **Caching**: Ski resorts endpoint is cached for 1 hour
+- **Error Isolation**: Provider errors don't break the entire search
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED

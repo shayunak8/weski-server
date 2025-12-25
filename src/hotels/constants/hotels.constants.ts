@@ -1,0 +1,16 @@
+export const HOTELS_CONSTANTS = {
+  STREAMING: {
+    HOTEL_EMISSION_DELAY_MS: 50,
+    SSE_TIMEOUT_MS: 60000,
+  },
+  SEARCH: {
+    MAX_GROUP_SIZE: 10,
+    MIN_GROUP_SIZE: 1,
+  },
+  CACHE: {
+    SKI_RESORTS_TTL_SECONDS: 3600,
+  },
+  API: {
+    TIMEOUT_MS: 30000,
+  },
+} as const;

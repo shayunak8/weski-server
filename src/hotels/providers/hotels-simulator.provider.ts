@@ -4,6 +4,7 @@ import axios, { AxiosInstance } from 'axios';
 import { IHotelProvider } from '../interfaces/hotel-provider.interface';
 import { HotelSearchQuery } from '../interfaces/hotel-search-query.interface';
 import { Hotel } from '../interfaces/hotel.interface';
+import { HOTELS_CONSTANTS } from '../constants/hotels.constants';
 
 interface HotelsSimulatorResponseBody {
   success: string;
@@ -48,7 +49,7 @@ export class HotelsSimulatorProvider implements IHotelProvider {
 
   constructor() {
     this.apiClient = axios.create({
-      timeout: 30000,
+      timeout: HOTELS_CONSTANTS.API.TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -98,33 +99,50 @@ export class HotelsSimulatorProvider implements IHotelProvider {
               return;
             }
 
-            accommodations.forEach((accommodation) => {
-              const images =
-                accommodation.HotelDescriptiveContent?.Images?.map(
-                  (img) => img.URL,
-                ) || [];
+            const emitHotelsSequentially = async () => {
+              for (let i = 0; i < accommodations.length; i++) {
+                const accommodation = accommodations[i];
+                const images =
+                  accommodation.HotelDescriptiveContent?.Images?.map(
+                    (img) => img.URL,
+                  ) || [];
 
-              const location = accommodation.HotelInfo?.Position
-                ? `${accommodation.HotelInfo.Position.Latitude}, ${accommodation.HotelInfo.Position.Longitude}`
-                : '';
+                const location = accommodation.HotelInfo?.Position
+                  ? `${accommodation.HotelInfo.Position.Latitude}, ${accommodation.HotelInfo.Position.Longitude}`
+                  : '';
 
-              const transformedHotel: Hotel = {
-                id: accommodation.HotelCode,
-                name: accommodation.HotelName,
-                price: parseFloat(
-                  accommodation.PricesInfo?.AmountAfterTax || '0',
-                ),
-                images: images,
-                amenities: [],
-                stars: parseInt(accommodation.HotelInfo?.Rating || '0', 10),
-                rating: 0,
-                location: location,
-                group_size: query.group_size,
-              };
-              subscriber.next(transformedHotel);
+                const transformedHotel: Hotel = {
+                  id: accommodation.HotelCode,
+                  name: accommodation.HotelName,
+                  price: parseFloat(
+                    accommodation.PricesInfo?.AmountAfterTax || '0',
+                  ),
+                  images: images,
+                  amenities: [],
+                  stars: parseInt(accommodation.HotelInfo?.Rating || '0', 10),
+                  rating: 0,
+                  location: location,
+                  group_size: query.group_size,
+                };
+
+                subscriber.next(transformedHotel);
+
+                if (i < accommodations.length - 1) {
+                  await new Promise((resolve) =>
+                    setTimeout(
+                      resolve,
+                      HOTELS_CONSTANTS.STREAMING.HOTEL_EMISSION_DELAY_MS,
+                    ),
+                  );
+                }
+              }
+
+              subscriber.complete();
+            };
+
+            emitHotelsSequentially().catch((error) => {
+              subscriber.error(error);
             });
-
-            subscriber.complete();
           } catch (error) {
             subscriber.error(
               new Error(
