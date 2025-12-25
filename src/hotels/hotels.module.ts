@@ -20,3 +20,4 @@ import { IHotelProvider } from './interfaces/hotel-provider.interface';
   exports: [HotelsService],
 })
 export class HotelsModule {}
+
