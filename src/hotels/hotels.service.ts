@@ -1,6 +1,6 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { Observable, merge, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { catchError, distinct } from 'rxjs/operators';
 import { IHotelProvider } from './interfaces/hotel-provider.interface';
 import { HotelSearchQuery } from './interfaces/hotel-search-query.interface';
 import { Hotel } from './interfaces/hotel.interface';
@@ -41,7 +41,7 @@ export class HotelsService {
       }
     }
 
-    return merge(...searchObservables).pipe(map((hotel) => hotel));
+    return merge(...searchObservables).pipe(distinct((hotel) => hotel.id));
   }
 
   private generateGroupSizes(requestedSize: number): number[] {
