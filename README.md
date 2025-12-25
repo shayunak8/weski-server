@@ -29,7 +29,7 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
-PORT=3001
+PORT=3000
 ```
 
 The server will default to port 3000 if `PORT` is not specified.
@@ -45,7 +45,7 @@ npm run build
 npm run start:prod
 ```
 
-The server will start on `http://localhost:3001` (or the port specified in `.env`).
+The server will start on `http://localhost:3000` (or the port specified in `.env`).
 
 ## API Endpoints
 
