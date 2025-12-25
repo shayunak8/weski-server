@@ -4,6 +4,7 @@ import axios, { AxiosInstance } from 'axios';
 import { IHotelProvider } from '../interfaces/hotel-provider.interface';
 import { HotelSearchQuery } from '../interfaces/hotel-search-query.interface';
 import { Hotel } from '../interfaces/hotel.interface';
+import { HOTELS_CONSTANTS } from '../constants/hotels.constants';
 
 interface HotelsSimulatorResponseBody {
   success: string;
@@ -48,7 +49,7 @@ export class HotelsSimulatorProvider implements IHotelProvider {
 
   constructor() {
     this.apiClient = axios.create({
-      timeout: 30000,
+      timeout: HOTELS_CONSTANTS.API.TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -127,7 +128,12 @@ export class HotelsSimulatorProvider implements IHotelProvider {
                 subscriber.next(transformedHotel);
 
                 if (i < accommodations.length - 1) {
-                  await new Promise((resolve) => setTimeout(resolve, 50));
+                  await new Promise((resolve) =>
+                    setTimeout(
+                      resolve,
+                      HOTELS_CONSTANTS.STREAMING.HOTEL_EMISSION_DELAY_MS,
+                    ),
+                  );
                 }
               }
 

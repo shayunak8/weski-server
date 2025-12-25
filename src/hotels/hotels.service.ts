@@ -1,12 +1,15 @@
-import { Injectable, Inject, Optional } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { Observable, merge, of } from 'rxjs';
 import { catchError, distinct } from 'rxjs/operators';
 import { IHotelProvider } from './interfaces/hotel-provider.interface';
 import { HotelSearchQuery } from './interfaces/hotel-search-query.interface';
 import { Hotel } from './interfaces/hotel.interface';
+import { HOTELS_CONSTANTS } from './constants/hotels.constants';
 
 @Injectable()
 export class HotelsService {
+  private readonly logger = new Logger(HotelsService.name);
+
   constructor(
     @Optional()
     @Inject('HOTEL_PROVIDERS')
@@ -30,9 +33,9 @@ export class HotelsService {
       for (const searchQuery of queries) {
         const providerObservable = provider.searchHotels(searchQuery).pipe(
           catchError((error) => {
-            console.error(
-              `Provider error for group_size ${searchQuery.group_size}:`,
-              error.message,
+            this.logger.error(
+              `Provider error for group_size ${searchQuery.group_size}`,
+              error.stack,
             );
             return of();
           }),
@@ -46,7 +49,11 @@ export class HotelsService {
 
   private generateGroupSizes(requestedSize: number): number[] {
     const sizes: number[] = [];
-    for (let i = requestedSize; i <= 10; i++) {
+    for (
+      let i = requestedSize;
+      i <= HOTELS_CONSTANTS.SEARCH.MAX_GROUP_SIZE;
+      i++
+    ) {
       sizes.push(i);
     }
     return sizes;
